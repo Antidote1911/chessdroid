@@ -62,6 +62,7 @@ public class DroidChessController {
     private PGNOptions pgnOptions;
 
     private String engine = "";
+    private String analysisEngine = ""; // empty means use game engine for analysis too
     private int numPV = 1;
 
     private SearchListener listener;
@@ -234,6 +235,24 @@ public class DroidChessController {
     /** Return current engine identifier. */
     public final synchronized String getEngine() {
         return engine;
+    }
+
+    /** Set analysis engine. Empty string means use the same engine as for playing. */
+    public final synchronized void setAnalysisEngine(String engine) {
+        if (!engine.equals(this.analysisEngine)) {
+            this.analysisEngine = engine;
+            restartSearch();
+        }
+    }
+
+    /** Return current analysis engine identifier, or empty string if same as game engine. */
+    public final synchronized String getAnalysisEngine() {
+        return analysisEngine;
+    }
+
+    /** Return the engine to use for analysis (falls back to game engine if none set). */
+    private String analysisEngineToUse() {
+        return analysisEngine.isEmpty() ? engine : analysisEngine;
     }
 
     /** Notify controller that preferences has changed. */
@@ -1012,7 +1031,7 @@ public class DroidChessController {
                 SearchRequest sr = SearchRequest.analyzeRequest(
                         searchId, ph.first, ph.second,
                         new Position(game.currPos()),
-                        game.haveDrawOffer(), engine, numPV);
+                        game.haveDrawOffer(), analysisEngineToUse(), numPV);
                 computerPlayer.queueAnalyzeRequest(sr);
             } else if (computersTurn || ponder) {
                 listener.clearSearchInfo(searchId);

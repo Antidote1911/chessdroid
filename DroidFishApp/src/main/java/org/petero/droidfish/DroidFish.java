@@ -437,6 +437,15 @@ public class DroidFish extends AppCompatActivity
                 }
             });
             addAction(new UIAction() {
+                public String getId() { return "selectAnalysisEngine"; }
+                public int getName() { return R.string.select_analysis_engine; }
+                public int getIcon() { return R.raw.engine; }
+                public boolean enabled() { return true; }
+                public void run() {
+                    reShowDialog(SELECT_ANALYSIS_ENGINE_DIALOG);
+                }
+            });
+            addAction(new UIAction() {
                 public String getId() { return "engineOptions"; }
                 public int getName() { return R.string.engine_options; }
                 public int getIcon() { return R.raw.custom; }
@@ -1152,6 +1161,9 @@ public class DroidFish extends AppCompatActivity
         String engine = settings.getString("engine", "stockfish");
         setEngine(engine);
 
+        String analysisEngine = settings.getString("analysisEngine", "");
+        setAnalysisEngine(analysisEngine);
+
         mPonderMode = settings.getBoolean("ponderMode", false);
         if (!mPonderMode)
             ctrl.stopPonder();
@@ -1372,6 +1384,37 @@ public class DroidFish extends AppCompatActivity
         setEngineTitle(engine, ctrl.eloData().getEloToUse());
     }
 
+    private void setAnalysisEngine(String engine) {
+        if (!storageAvailable() && !engine.isEmpty()) {
+            if (!"stockfish".equals(engine) && !"cuckoochess".equals(engine))
+                engine = "";
+        }
+        ctrl.setAnalysisEngine(engine);
+    }
+
+    /** Return a human-readable name for an engine identifier. */
+    private String engineDisplayName(String engine) {
+        if (engine.isEmpty())
+            return getString(R.string.same_as_game_engine);
+        if (EngineUtil.isOpenExchangeEngine(engine)) {
+            String engineFileName = new File(engine).getName();
+            ChessEngineResolver resolver = new ChessEngineResolver(this);
+            List<ChessEngine> engines = resolver.resolveEngines();
+            for (ChessEngine ce : engines) {
+                if (EngineUtil.openExchangeFileName(ce).equals(engineFileName))
+                    return ce.getName();
+            }
+            return engineFileName;
+        } else if (engine.contains("/")) {
+            int idx = engine.lastIndexOf('/');
+            return engine.substring(idx + 1);
+        } else {
+            return getString("cuckoochess".equals(engine) ?
+                             R.string.cuckoochess_engine :
+                             R.string.stockfish_engine);
+        }
+    }
+
     private void setEngineTitle(String engine, int elo) {
         String eName = "";
         if (EngineUtil.isOpenExchangeEngine(engine)) {
@@ -1420,7 +1463,13 @@ public class DroidFish extends AppCompatActivity
     @Override
     public void updateEngineTitle(int elo) {
         String engine = settings.getString("engine", "stockfish");
-        setEngineTitle(engine, elo);
+        String analysisEngine = settings.getString("analysisEngine", "");
+        if (ctrl != null && ctrl.analysisMode() && !analysisEngine.isEmpty()) {
+            String aName = engineDisplayName(analysisEngine);
+            engineTitleText.setText(aName);
+        } else {
+            setEngineTitle(engine, elo);
+        }
     }
 
     @Override
@@ -2188,6 +2237,7 @@ public class DroidFish extends AppCompatActivity
     static private final int SET_STRENGTH_DIALOG = 28;
     static private final int SET_BOARD_TEXTURE_DIALOG = 29;
     static private final int ENGINE_MATCH_DIALOG = 30;
+    static private final int SELECT_ANALYSIS_ENGINE_DIALOG = 31;
 
     /** Show a dialog, dismissing any existing instance with the same tag. */
     void reShowDialog(int id) {
@@ -2234,7 +2284,8 @@ public class DroidFish extends AppCompatActivity
         case DELETE_NETWORK_ENGINE_DIALOG:   return deleteNetworkEngineDialog();
         case CLIPBOARD_DIALOG:               return clipBoardDialog();
         case SELECT_FEN_FILE_DIALOG:         return selectFenFileDialog();
-        case ENGINE_MATCH_DIALOG:            return engineMatchDialog();
+        case ENGINE_MATCH_DIALOG:                return engineMatchDialog();
+        case SELECT_ANALYSIS_ENGINE_DIALOG:      return selectAnalysisEngineDialog();
         }
         return null;
     }
@@ -2784,6 +2835,67 @@ public class DroidFish extends AppCompatActivity
             if (!abortOnCancel)
                 reShowDialog(MANAGE_ENGINES_DIALOG);
         });
+        return builder.create();
+    }
+
+    private Dialog selectAnalysisEngineDialog() {
+        final ArrayList<String> items = new ArrayList<>();
+        final ArrayList<String> ids = new ArrayList<>();
+        ids.add(""); items.add(getString(R.string.same_as_game_engine));
+        ids.add("stockfish"); items.add(getString(R.string.stockfish_engine));
+        ids.add("cuckoochess"); items.add(getString(R.string.cuckoochess_engine));
+
+        if (storageAvailable()) {
+            final File engineDirFile = StorageProvider.getEngineDir();
+            final String base = engineDirFile.getAbsolutePath() + File.separator;
+            {
+                ChessEngineResolver resolver = new ChessEngineResolver(this);
+                List<ChessEngine> engines = resolver.resolveEngines();
+                ArrayList<Pair<String,String>> oexEngines = new ArrayList<>();
+                for (ChessEngine engine : engines) {
+                    if ((engine.getName() != null) && (engine.getFileName() != null) &&
+                            (engine.getPackageName() != null)) {
+                        oexEngines.add(new Pair<>(EngineUtil.openExchangeFileName(engine),
+                                engine.getName()));
+                    }
+                }
+                Collections.sort(oexEngines, (lhs, rhs) -> lhs.second.compareTo(rhs.second));
+                for (Pair<String,String> eng : oexEngines) {
+                    ids.add(base + EngineUtil.openExchangeDir + File.separator + eng.first);
+                    items.add(eng.second);
+                }
+            }
+
+            String[] fileNames = FileUtil.findFilesInDirectory(engineDirFile,
+                                                               fname -> !reservedEngineName(fname));
+            for (String file : fileNames) {
+                ids.add(base + file);
+                items.add(file);
+            }
+        }
+
+        String currAnalysisEngine = ctrl.getAnalysisEngine();
+        int defaultItem = 0;
+        final int nEngines = items.size();
+        for (int i = 0; i < nEngines; i++) {
+            if (ids.get(i).equals(currAnalysisEngine)) {
+                defaultItem = i;
+                break;
+            }
+        }
+        AlertDialog.Builder builder = new MaterialAlertDialogBuilder(this);
+        builder.setTitle(R.string.select_analysis_chess_engine);
+        builder.setSingleChoiceItems(items.toArray(new String[0]), defaultItem,
+                (dialog, item) -> {
+                    if ((item < 0) || (item >= nEngines))
+                        return;
+                    Editor editor = settings.edit();
+                    String engine = ids.get(item);
+                    editor.putString("analysisEngine", engine);
+                    editor.apply();
+                    dialog.dismiss();
+                    setAnalysisEngine(engine);
+                });
         return builder.create();
     }
 
@@ -3971,11 +4083,15 @@ public class DroidFish extends AppCompatActivity
 
     private Dialog manageEnginesDialog() {
         final int SELECT_ENGINE = 0;
-        final int SET_ENGINE_OPTIONS = 1;
-        final int CONFIG_NET_ENGINE = 2;
+        final int SELECT_ANALYSIS_ENGINE = 1;
+        final int SET_ENGINE_OPTIONS = 2;
+        final int CONFIG_NET_ENGINE = 3;
         List<String> lst = new ArrayList<>();
         final List<Integer> actions = new ArrayList<>();
         lst.add(getString(R.string.select_engine)); actions.add(SELECT_ENGINE);
+        String analysisEngineName = engineDisplayName(ctrl.getAnalysisEngine());
+        lst.add(getString(R.string.select_analysis_engine) + " [" + analysisEngineName + "]");
+        actions.add(SELECT_ANALYSIS_ENGINE);
         if (canSetEngineOptions()) {
             lst.add(getString(R.string.set_engine_options));
             actions.add(SET_ENGINE_OPTIONS);
@@ -3987,6 +4103,9 @@ public class DroidFish extends AppCompatActivity
             switch (actions.get(item)) {
             case SELECT_ENGINE:
                 reShowDialog(SELECT_ENGINE_DIALOG);
+                break;
+            case SELECT_ANALYSIS_ENGINE:
+                reShowDialog(SELECT_ANALYSIS_ENGINE_DIALOG);
                 break;
             case SET_ENGINE_OPTIONS:
                 setEngineOptions();
