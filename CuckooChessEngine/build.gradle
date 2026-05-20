@@ -1,0 +1,23 @@
+apply plugin: 'java-library'
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'androidx.test:core:1.5.0'
+    testImplementation 'org.mockito:mockito-core:4.11.0'
+}
+
+sourceCompatibility = '11'
+targetCompatibility = '11'
+
+
+// Build internal opening book
+task buildBook {
+    def a = "CuckooChessEngine/src/main/book.txt"
+    def b = "CuckooChessEngine/src/main/resources/book.bin"
+    chess.Book.main2(a, b)
+}
+tasks.withType(JavaCompile) {
+    t -> t.dependsOn buildBook
+}
