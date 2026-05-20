@@ -80,6 +80,9 @@ If you are running on battery power, it is recommended that you change settings 
     <string name="no_book">&lt;No Book&gt;</string>
     <string name="select_opening_book_file">Select opening book file</string>
     <string name="select_chess_engine">Select Chess Engine</string>
+    <string name="select_analysis_chess_engine">Select Analysis Engine</string>
+    <string name="select_analysis_engine">Select Analysis Engine</string>
+    <string name="same_as_game_engine">Same as game engine</string>
     <string name="select_pgn_file">Open PGN file</string>
     <string name="select_pgn_file_save">Save to PGN file</string>
     <string name="select_fen_file">Open FEN/EPD file</string>
@@ -891,6 +894,7 @@ If you are running on battery power, it is recommended that you change settings 
         <item>@string/load_last_file</item>
         <item>@string/load_game</item>
         <item>@string/select_engine</item>
+        <item>@string/select_analysis_engine</item>
         <item>@string/engine_options</item>
         </string-array>
     <string-array name="button_action_values">
@@ -910,6 +914,7 @@ If you are running on battery power, it is recommended that you change settings 
         <item>loadLastFile</item>
         <item>loadGame</item>
         <item>selectEngine</item>
+        <item>selectAnalysisEngine</item>
         <item>engineOptions</item>
     </string-array>
     <string-array name="move_announce_type_values">
