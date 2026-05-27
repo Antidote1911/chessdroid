@@ -20,21 +20,23 @@ package org.petero.droidfish;
 
 /** Engine options, including endgame tablebase probing options. */
 public final class EngineOptions {
-    public int hashMB;          // Engine hash table size in MB
-    public boolean unSafeHash;  // True if allocating very large hash is allowed
-    public boolean hints;       // Hints when playing/analyzing
-    public boolean hintsEdit;   // Hints in "edit board" mode
-    public boolean rootProbe;   // Only search optimal moves at root
-    public boolean engineProbe; // Let engine use EGTB
-    String gtbPath;             // GTB directory path
-    String gtbPathNet;          // GTB directory path for network engines
-    String rtbPath;             // Syzygy directory path
-    String rtbPathNet;          // Syzygy directory path for network engines
-    public String networkID;    // host+port network settings
-    public String workDir;      // Working directory for engine process
+    public int hashMB;           // Engine hash table size in MB (game engine)
+    public int analysisHashMB;   // Hash table size for analysis engine (0 = same as hashMB)
+    public boolean unSafeHash;   // True if allocating very large hash is allowed
+    public boolean hints;        // Hints when playing/analyzing
+    public boolean hintsEdit;    // Hints in "edit board" mode
+    public boolean rootProbe;    // Only search optimal moves at root
+    public boolean engineProbe;  // Let engine use EGTB
+    String gtbPath;              // GTB directory path
+    String gtbPathNet;           // GTB directory path for network engines
+    String rtbPath;              // Syzygy directory path
+    String rtbPathNet;           // Syzygy directory path for network engines
+    public String networkID;     // host+port network settings
+    public String workDir;       // Working directory for engine process
 
     public EngineOptions() {
         hashMB = 16;
+        analysisHashMB = 0;
         unSafeHash = false;
         hints = false;
         hintsEdit = false;
@@ -50,6 +52,7 @@ public final class EngineOptions {
 
     public EngineOptions(EngineOptions other) {
         hashMB = other.hashMB;
+        analysisHashMB = other.analysisHashMB;
         unSafeHash = other.unSafeHash;
         hints = other.hints;
         hintsEdit = other.hintsEdit;
@@ -84,6 +87,7 @@ public final class EngineOptions {
         EngineOptions other = (EngineOptions)o;
 
         return ((hashMB == other.hashMB) &&
+                (analysisHashMB == other.analysisHashMB) &&
                 (unSafeHash == other.unSafeHash) &&
                 (hints == other.hints) &&
                 (hintsEdit == other.hintsEdit) &&

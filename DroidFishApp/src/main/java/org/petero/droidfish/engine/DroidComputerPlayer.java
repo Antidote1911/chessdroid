@@ -410,7 +410,7 @@ public class DroidComputerPlayer {
     /** Start an engine, if not already started.
      * Will shut down old engine first, if needed. */
     public final synchronized void queueStartEngine(int id, String engine) {
-        killOldEngine(engine);
+        killOldEngine(engine, false);
         stopSearch();
         searchRequest = SearchRequest.startRequest(id, engine);
         handleQueue();
@@ -438,7 +438,7 @@ public class DroidComputerPlayer {
      * command, such as "draw" and "resign".
      */
     public final synchronized void queueSearchRequest(SearchRequest sr) {
-        killOldEngine(sr.engine);
+        killOldEngine(sr.engine, false);
         stopSearch();
 
         if (sr.ponderMove != null)
@@ -492,7 +492,7 @@ public class DroidComputerPlayer {
 
     /** Start analyzing a position. */
     public final synchronized void queueAnalyzeRequest(SearchRequest sr) {
-        killOldEngine(sr.engine);
+        killOldEngine(sr.engine, true);
         stopSearch();
 
         // If no legal moves, there is nothing to analyze
@@ -513,12 +513,21 @@ public class DroidComputerPlayer {
             handleIdleState();
     }
 
-    private void killOldEngine(String engine) {
+    /** Return engine options effective for a given search mode. */
+    private EngineOptions effectiveOptions(boolean isAnalysis) {
+        if (!isAnalysis || engineOptions.analysisHashMB <= 0)
+            return engineOptions;
+        EngineOptions opts = new EngineOptions(engineOptions);
+        opts.hashMB = engineOptions.analysisHashMB;
+        return opts;
+    }
+
+    private void killOldEngine(String engine, boolean isAnalysis) {
         boolean needShutDown = !engine.equals(engineState.engine);
         if (!needShutDown) {
             UCIEngine uci = uciEngine;
             if (uci != null)
-                needShutDown = !uci.optionsOk(engineOptions);
+                needShutDown = !uci.optionsOk(effectiveOptions(isAnalysis));
         }
         if (needShutDown)
             shutdownEngine();
@@ -769,7 +778,8 @@ public class DroidComputerPlayer {
         case READ_OPTIONS: {
             if (readUCIOption(uci, s)) {
                 pendingOptions.clear();
-                uci.initOptions(engineOptions);
+                boolean isAnalysis = searchRequest != null && searchRequest.isAnalyze;
+                uci.initOptions(effectiveOptions(isAnalysis));
                 uci.applyIniFile();
                 uci.writeLineToEngine("ucinewgame");
                 uci.writeLineToEngine("isready");

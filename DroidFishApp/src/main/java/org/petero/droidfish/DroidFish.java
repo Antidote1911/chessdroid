@@ -1222,6 +1222,7 @@ public class DroidFish extends AppCompatActivity
         setBookOptions();
 
         engineOptions.hashMB = getIntSetting("hashMB", 16);
+        engineOptions.analysisHashMB = getIntSetting("analysisHashMB", 0);
         engineOptions.unSafeHash = new File(StorageProvider.getEngineDir(), ".unsafehash").exists();
         engineOptions.hints = settings.getBoolean("tbHints", false);
         engineOptions.hintsEdit = settings.getBoolean("tbHintsEdit", false);
@@ -4088,12 +4089,21 @@ public class DroidFish extends AppCompatActivity
         final int CONFIG_NET_ENGINE = 3;
         List<String> lst = new ArrayList<>();
         final List<Integer> actions = new ArrayList<>();
-        lst.add(getString(R.string.select_engine)); actions.add(SELECT_ENGINE);
+
+        String gameEngineName = engineDisplayName(settings.getString("engine", "stockfish"));
+        lst.add(getString(R.string.select_engine) + " [" + gameEngineName + "]");
+        actions.add(SELECT_ENGINE);
+
         String analysisEngineName = engineDisplayName(ctrl.getAnalysisEngine());
         lst.add(getString(R.string.select_analysis_engine) + " [" + analysisEngineName + "]");
         actions.add(SELECT_ANALYSIS_ENGINE);
+
         if (canSetEngineOptions()) {
-            lst.add(getString(R.string.set_engine_options));
+            boolean inAnalysis = ctrl.analysisMode() && !ctrl.getAnalysisEngine().isEmpty();
+            String optLabel = inAnalysis
+                    ? getString(R.string.set_analysis_engine_options)
+                    : getString(R.string.set_engine_options);
+            lst.add(optLabel);
             actions.add(SET_ENGINE_OPTIONS);
         }
         lst.add(getString(R.string.configure_network_engine)); actions.add(CONFIG_NET_ENGINE);

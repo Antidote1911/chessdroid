@@ -44,6 +44,14 @@
             android:entries="@array/engine_hash_texts"
             android:defaultValue="@string/engine_hash_default">
         </ListPreference>
+        <ListPreference
+            android:key="analysisHashMB"
+            android:title="@string/prefs_analysis_hash_title"
+            android:summary="@string/prefs_analysis_hash_summary"
+            android:entryValues="@array/analysis_hash_values"
+            android:entries="@array/analysis_hash_texts"
+            android:defaultValue="@string/analysis_hash_default">
+        </ListPreference>
     </PreferenceCategory>
     <PreferenceCategory
         android:title="@string/prefs_hints">
